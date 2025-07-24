@@ -1,0 +1,666 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        128,
+        0
+      ],
+      "id": "51bca5f9-9d75-4f73-b994-fe9a55acf6c8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "getAll",
+        "limit": 50,
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "email",
+                "jobtitle",
+                "firstname",
+                "lastname"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        0
+      ],
+      "id": "0653a04c-a70c-4b05-9dc3-75b3f5807dd2",
+      "name": "Get many contacts",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "8nWvfoiSxhAEjvUv",
+          "name": "HubSpot App Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "23ea92f2-ca60-4b6d-85e7-ee4b3280e5d7",
+              "leftValue": "={{$json.properties.lastname.value}}",
+              "rightValue": "=\\s",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "02a1999d-b7f7-4db0-a24f-98d4cbd72cc0",
+              "leftValue": "={{$json.properties.firstname.value}}",
+              "rightValue": "=\\s",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "34df979f-5c77-4ed3-8587-295e247b44db",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un experto en reclutamiento y búsqueda de talento online. Tu tarea es generar la mejor cadena de búsqueda para Google con el fin de encontrar el perfil de LinkedIn de una persona específica.\n\n**Contexto Clave:** La persona que buscamos es estudiante o egresado de la \"Universidad Técnica Particular de Loja\".\n\n**Datos del Contacto:**\n* Nombre: {{$json.properties.firstname.value}}\n* Apellido: {{$json.properties.lastname.value}}\n* Correo: {{$json.properties.email.value}}\n\n**Instrucción:**\nCrea la cadena de búsqueda más precisa posible para Google, combinando los datos del contacto con el contexto clave. La respuesta DEBE ser un objeto JSON con una sola clave: \"Google Search_query\".",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        608,
+        0
+      ],
+      "id": "db2a18d1-66a3-4e5a-9ee0-0a837a7116ce",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        544,
+        208
+      ],
+      "id": "22bec85a-28a8-4f1e-8daa-93f50ba0567c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mG2jCTsidLOpURMn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json.text;\n// Encuentra la parte del texto que es un JSON\nconst jsonString = text.match(/\\{[\\s\\S]*\\}/)[0];\n// Convierte el texto JSON en un objeto real\nconst data = JSON.parse(jsonString);\n// Devuelve el objeto\nreturn data;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        0
+      ],
+      "id": "f6f59104-22f4-4a98-87cb-2159b517fd52",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "q": "={{ $json[\"Google Search_query\"] }}",
+        "location": "Loja, Loja Ecuador",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApi",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "a794a3bd-cc76-4f11-b18f-ccff2f4ae97c",
+      "name": "Google search",
+      "credentials": {
+        "serpApi": {
+          "id": "XBcnPc8xurUTvHku",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor",
+        "actorId": {
+          "__rl": true,
+          "value": "yZnhB5JewWf9xSmoM",
+          "mode": "list",
+          "cachedResultName": "Linkedin Profile Scraper ✅ No cookie ✅ $3 per 1k profiles",
+          "cachedResultUrl": "https://console.apify.com/actors/yZnhB5JewWf9xSmoM/input"
+        },
+        "customBody": "={\n    \"findContacts\": false,\n    \"scrapeCompany\": false,\n    \"urls\": [\n        {\n            \"url\": \"{{ $json.organic_results[0].link }}\",\n            \"method\": \"GET\"\n        }\n    ]\n}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -208
+      ],
+      "id": "3ff7f995-d772-4280-ba66-ff02ba688c34",
+      "name": "Run an Actor",
+      "credentials": {
+        "apifyApi": {
+          "id": "BQHqfrXxbzsnAXPE",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        -208
+      ],
+      "id": "6b981d75-2507-442b-8ca2-02c28b100530",
+      "name": "Wait",
+      "webhookId": "e887c0de-ceec-4879-9640-be3c953435fd"
+    },
+    {
+      "parameters": {
+        "resource": "Datasets",
+        "operation": "Get items",
+        "datasetId": "={{ $json.defaultDatasetId }}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -208
+      ],
+      "id": "b6a8953b-4d80-4e91-8550-d468687dea25",
+      "name": "Get dataset items",
+      "credentials": {
+        "apifyApi": {
+          "id": "BQHqfrXxbzsnAXPE",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8e3bccb7-bc04-4d62-b218-377e8cd3893f",
+              "leftValue": "={{$json.error}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "ec5b01d8-7af1-4cae-8b18-cf9aa5688aba",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1e8PKEKmiyEjPhYyv5I0hGEittErSKdndZK0JYmjR4dc",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1e8PKEKmiyEjPhYyv5I0hGEittErSKdndZK0JYmjR4dc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Titular": "={{$json.headline}}",
+            "Resumen": "={{$json.summary}}",
+            "Habilidades": "={{$json.skills.join(', ')}}",
+            "Industria": "={{$json.industryName}}",
+            "Ubicacion": "={{$json.geoLocationName}}",
+            "Puesto de Trabajo": "={{$json.jobTitle}}",
+            "Empresa": "={{$json.companyName}}",
+            "Seguidores": "={{$json.followersCount}}",
+            "URL del Perfil": "={{$json.inputUrl}}",
+            "Nombres": "={{ $json.firstName }}",
+            "Apellidos": "={{ $json.lastName }}",
+            "Pais": "={{ $json.countryCode }}"
+          },
+          "matchingColumns": [
+            "Titular"
+          ],
+          "schema": [
+            {
+              "id": "Titular",
+              "displayName": "Titular",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nombres",
+              "displayName": "Nombres",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Apellidos",
+              "displayName": "Apellidos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pais",
+              "displayName": "Pais",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resumen",
+              "displayName": "Resumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Habilidades",
+              "displayName": "Habilidades",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industria",
+              "displayName": "Industria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ubicacion",
+              "displayName": "Ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Puesto de Trabajo",
+              "displayName": "Puesto de Trabajo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seguidores",
+              "displayName": "Seguidores",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL del Perfil",
+              "displayName": "URL del Perfil",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2576,
+        -208
+      ],
+      "id": "4c094af7-facc-4c64-b887-6a18dbbd2a0d",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0r7peJtxwiNy4u57",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        -48
+      ],
+      "id": "4c6f8a51-10d1-480e-9c00-98dbca80865f",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        -48
+      ],
+      "id": "8f764b6f-5994-48a9-afd8-d1ea2c6bbfc4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6fb8da7c-6f22-4f9b-bf29-63429e1b3093",
+              "leftValue": "={{ $json.organic_results[0].link }}",
+              "rightValue": "linkedin.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        -192
+      ],
+      "id": "c54bdf0c-fb13-4faf-a0e7-94c4e0b66cee",
+      "name": "If1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many contacts": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Google search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run an Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get dataset items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get dataset items": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3b1ac887-dbca-4d44-b09c-2a0353a6315d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "249d60be7d27df2f5d841e0cfa60f4833354856249b19de01ca98f4d540ff80b"
+  },
+  "id": "1gqXV0znbgzYqWUJ",
+  "tags": []
+}
